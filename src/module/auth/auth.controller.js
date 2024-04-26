@@ -6,29 +6,56 @@ import { sendEmail } from '../../services/email.js';
 import { nanoid ,customAlphabet} from "nanoid";
 
 
-export const signUp =async (req,res,next)=>{
-    const {userName, email, password} = req.body;
+// export const signUp =async (req,res,next)=>{
+//     const {userName, email, password} = req.body;
 
-        const user = await userModel.findOne({email});
+//         const user = await userModel.findOne({email});
         
-        if (user){
-        return next(new Error("email already exists",{cause:409}));
-       // return res.status (409).json({message: "email already exists"});
-     }
+//         if (user){
+//         return next(new Error("email already exists",{cause:409}));
+//        // return res.status (409).json({message: "email already exists"});
+//      }
         
-        const hashedPassword=await bcrypt.hash (password, parseInt(process.env.SALT_ROUND));
+//         const hashedPassword=await bcrypt.hash (password, parseInt(process.env.SALT_ROUND));
 
-        // const {secure_url, public_id}= await cloudinary.uploader.upload(req.file.path,
-        //     { folder: `${process.env.APP_NAME}/users`})
+//         // const {secure_url, public_id}= await cloudinary.uploader.upload(req.file.path,
+//         //     { folder: `${process.env.APP_NAME}/users`})
 
-            const token =jwt.sign({email},process.env.CONFIRMEMAILSECRET);
+//             const token =jwt.sign({email},process.env.CONFIRMEMAILSECRET);
 
-            const html=  `<a href='${req.protocol}://${req.headers.host}/auth/confirmEmail/${token}>verify</a>`
-        await sendEmail(email, "confirm email",html); 
-        // const createUser = await userModel.create({userName, email, password:hashedPassword,image:{secure_url, public_id}})
-          const createUser = await userModel.create({userName, email, password:hashedPassword})
-        return res.status(201).json({message: "success", createUser})
-}
+//             const html=  `<a href='${req.protocol}://${req.headers.host}/auth/confirmEmail/${token}>verify</a>`
+//         await sendEmail(email, "confirm email",html); 
+//         // const createUser = await userModel.create({userName, email, password:hashedPassword,image:{secure_url, public_id}})
+//           const createUser = await userModel.create({userName, email, password:hashedPassword})
+//         return res.status(201).json({message: "success", createUser})
+// }
+export const signUp = async (req, res, next) => {
+    try {
+        const { userName, email, password } = req.body;
+
+        const user = await userModel.findOne({ email });
+        if (user) {
+            return next(new Error("Email already exists", { cause: 409 }));
+        }
+
+        let hashedPassword;
+        try {
+            hashedPassword = await bcrypt.hash(password, parseInt(process.env.SALT_ROUND, 10));
+        } catch (error) {
+            return next(new Error("Error hashing password", { cause: 500 }));
+        }
+
+        const token = jwt.sign({ email }, process.env.CONFIRMEMAILSECRET);
+        const html = `<a href='${req.protocol}://${req.headers.host}/auth/confirmEmail/${token}'>verify</a>`;
+
+        await sendEmail(email, "confirm email", html); 
+
+        const createUser = await userModel.create({ userName, email, password: hashedPassword });
+        return res.status(201).json({ message: "success", createUser });
+    } catch (error) {
+        return next(error); // Pass any error to the error handler middleware
+    }
+};
 
 
 
